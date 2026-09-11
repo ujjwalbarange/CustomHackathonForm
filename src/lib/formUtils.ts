@@ -342,13 +342,42 @@ export async function submitRegistration(data: RegistrationFormData): Promise<{
       body: JSON.stringify({ formData: data }),
     });
 
+    const contentType = res.headers.get("content-type") || "";
+
+    if (!contentType.includes("application/json")) {
+      const rawText = await res.text();
+      console.warn("Received non-JSON response from server:", res.status, rawText.slice(0, 150));
+
+      if (
+        res.status === 404 ||
+        rawText.includes("The page could not be found") ||
+        rawText.includes("Cannot POST")
+      ) {
+        return {
+          success: false,
+          status: res.status,
+          errorType: "API_ROUTE_NOT_FOUND",
+          message:
+            "The backend submission API route was not found on this deployment. Please verify that /api/submit.ts and vercel.json are committed to your repository.",
+        };
+      }
+
+      return {
+        success: false,
+        status: res.status,
+        message: `The server returned an unexpected response (status ${res.status}).`,
+      };
+    }
+
     const result = await res.json();
     return result;
   } catch (err: any) {
     console.error("Submission error:", err);
     return {
       success: false,
-      message: err?.message || "Failed to submit registration. Please check your network connection.",
+      message:
+        err?.message ||
+        "Failed to submit registration. Please check your network connection.",
     };
   }
 }

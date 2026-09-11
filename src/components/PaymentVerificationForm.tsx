@@ -101,12 +101,59 @@ export const PaymentVerificationForm: React.FC<PaymentVerificationFormProps> = (
 
     const reader = new FileReader();
     reader.onload = () => {
-      const base64String = reader.result as string;
-      onChange({
-        screenshotBase64: base64String,
-        screenshotFileName: file.name,
-        screenshotFileSize: file.size,
-      });
+      const rawBase64 = reader.result as string;
+
+      // Optimize image client-side to prevent Vercel 4.5MB payload limits while keeping receipt text pin-sharp
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const MAX_DIM = 1600;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > MAX_DIM || height > MAX_DIM) {
+            if (width > height) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            } else {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
+            }
+          }
+
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const optimizedBase64 = canvas.toDataURL("image/jpeg", 0.88);
+            const approxBytes = Math.round((optimizedBase64.length * 3) / 4);
+            onChange({
+              screenshotBase64: optimizedBase64,
+              screenshotFileName: file.name,
+              screenshotFileSize: approxBytes,
+            });
+            return;
+          }
+        } catch (e) {
+          console.warn("Canvas compression fallback:", e);
+        }
+
+        onChange({
+          screenshotBase64: rawBase64,
+          screenshotFileName: file.name,
+          screenshotFileSize: file.size,
+        });
+      };
+      img.onerror = () => {
+        onChange({
+          screenshotBase64: rawBase64,
+          screenshotFileName: file.name,
+          screenshotFileSize: file.size,
+        });
+      };
+      img.src = rawBase64;
     };
     reader.onerror = () => {
       setFileError("Error reading image file. Please try again.");
