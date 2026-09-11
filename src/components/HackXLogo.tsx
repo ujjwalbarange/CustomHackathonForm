@@ -4,17 +4,23 @@ interface HackXLogoProps {
   size?: "sm" | "md" | "lg";
   showTagline?: boolean;
   subtitle?: string;
+  href?: string;
+  target?: string;
+  onClick?: () => void;
 }
 
 export const HackXLogo: React.FC<HackXLogoProps> = ({
   size = "md",
   showTagline = false,
   subtitle,
+  href,
+  target,
+  onClick,
 }) => {
   const isSm = size === "sm";
   const isLg = size === "lg";
 
-  return (
+  const content = (
     <div className="flex items-center gap-3">
       {/* Visual Emblem */}
       <div
@@ -73,9 +79,37 @@ export const HackXLogo: React.FC<HackXLogoProps> = ({
           </span>
         </div>
         <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium tracking-tight">
-          {subtitle || (showTagline ? "Hackathon for Advanced Engineering & Knowledge eXchange" : "Official Registration Portal")}
+          {subtitle || (showTagline ? "Hackathon for Advanced Coding & Knowledge eXchange" : "Official Registration Portal")}
         </span>
       </div>
     </div>
   );
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        target={target}
+        rel={target === "_blank" ? "noopener noreferrer" : undefined}
+        onClick={onClick}
+        className="hover:opacity-90 transition-opacity focus:outline-hidden"
+      >
+        {content}
+      </a>
+    );
+  }
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="text-left hover:opacity-90 transition-opacity focus:outline-hidden"
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return content;
 };

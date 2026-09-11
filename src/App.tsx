@@ -6,13 +6,62 @@ import { DynamicMembersForm } from "./components/DynamicMembersForm";
 import { PaymentVerificationForm } from "./components/PaymentVerificationForm";
 import { FormSubmittedSuccess } from "./components/FormSubmittedSuccess";
 import { HackXLogo } from "./components/HackXLogo";
+import { Footer } from "./components/Footer";
+import { HomePage } from "./components/HomePage";
 import { RegistrationFormData, OFFICIAL_WHATSAPP_GROUP_LINK } from "./types";
 import { createEmptyFormData } from "./lib/formUtils";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, ExternalLink, Sparkles, BookOpen } from "lucide-react";
 
 const AUTOSAVE_STORAGE_KEY = "hackx_registration_form_data";
 
 export default function App() {
+  // Navigation view state: "register" | "home"
+  const [currentView, setCurrentView] = useState<"register" | "home">(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const viewParam = urlParams.get("view");
+      if (viewParam === "home" || window.location.hash === "#home") {
+        return "home";
+      }
+    }
+    return "register";
+  });
+
+  // Listen for browser popstate / hashchange navigation
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("view") === "home" || window.location.hash === "#home") {
+        setCurrentView("home");
+      } else {
+        setCurrentView("register");
+      }
+    };
+    window.addEventListener("popstate", handleLocationChange);
+    window.addEventListener("hashchange", handleLocationChange);
+    return () => {
+      window.removeEventListener("popstate", handleLocationChange);
+      window.removeEventListener("hashchange", handleLocationChange);
+    };
+  }, []);
+
+  const navigateToHome = () => {
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.set("view", "home");
+    window.history.pushState({}, "", newUrl.toString());
+    setCurrentView("home");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const navigateToRegister = () => {
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.delete("view");
+    newUrl.hash = "";
+    window.history.pushState({}, "", newUrl.toString());
+    setCurrentView("register");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   // Initialize form state from localStorage (Auto-Save restoration)
   const [formData, setFormData] = useState<RegistrationFormData>(() => {
     const defaultData = createEmptyFormData();
@@ -120,16 +169,52 @@ export default function App() {
 
   const teamMemberCount = parseInt(formData.teamSize.match(/\d+/)?.[0] || "4", 10) - 1;
 
+  // If the user navigated to the Home / Overview & Rules page
+  if (currentView === "home") {
+    return (
+      <div className="min-h-screen flex flex-col font-sans">
+        <HomePage
+          onNavigateRegister={navigateToRegister}
+          isDark={isDark}
+          onToggleTheme={toggleDarkMode}
+        />
+        <Footer
+          onNavigateHome={navigateToHome}
+          onNavigateRegister={navigateToRegister}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#070D18] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors selection:bg-cyan-500/20 selection:text-cyan-600 dark:selection:text-cyan-400">
       {/* Top Navigation Bar */}
       <header className="bg-white/90 dark:bg-[#0B132B]/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 sticky top-0 z-30 transition-colors">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <HackXLogo size="sm" />
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Logo links to /?view=home in new tab */}
+            <HackXLogo
+              size="sm"
+              href="/?view=home"
+              target="_blank"
+            />
+
+            {/* Clickable badge on the side of HackX logo to open the overview & rules in a new tab */}
+            <a
+              href="/?view=home"
+              target="_blank"
+              rel="noopener noreferrer"
+              id="hackx-overview-header-link"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 text-xs font-bold transition-all shadow-2xs group"
+              title="Open HackX 2026 Overview, Timelines & Rules in a new tab"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+              <span className="hidden xs:inline sm:inline">Overview &amp; Rules</span>
+              <ExternalLink className="w-3 h-3 opacity-70 group-hover:opacity-100 transition-opacity" />
+            </a>
           </div>
 
-          {/* Right Action: Dark Mode Toggle only (WhatsApp link is strictly restricted to final success screen) */}
+          {/* Right Action: Dark Mode Toggle */}
           <div className="flex items-center gap-2.5">
             <button
               type="button"
@@ -283,6 +368,12 @@ export default function App() {
           </main>
         </>
       )}
+
+      {/* Comprehensive Footer */}
+      <Footer
+        onNavigateHome={navigateToHome}
+        onNavigateRegister={navigateToRegister}
+      />
     </div>
   );
 }
