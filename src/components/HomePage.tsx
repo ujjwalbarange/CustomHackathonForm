@@ -19,20 +19,14 @@ import {
   HelpCircle,
   IndianRupee,
   Flame,
-  Sun,
-  Moon,
 } from "lucide-react";
 
 interface HomePageProps {
   onNavigateRegister: () => void;
-  isDark: boolean;
-  onToggleTheme: () => void;
 }
 
 export const HomePage: React.FC<HomePageProps> = ({
   onNavigateRegister,
-  isDark,
-  onToggleTheme,
 }) => {
   return (
     <div className="min-h-[100dvh] bg-slate-50 dark:bg-[#070D18] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors selection:bg-cyan-500/20 selection:text-cyan-600 dark:selection:text-cyan-400">
@@ -44,28 +38,6 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
 
           <div className="flex items-center gap-2.5 sm:gap-3">
-            {/* Light / Dark Mode Toggle */}
-            <button
-              type="button"
-              id="landing-theme-toggle-btn"
-              onClick={onToggleTheme}
-              className="p-2 sm:px-3 sm:py-1.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all flex items-center gap-2 text-xs font-semibold shadow-2xs"
-              title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              aria-label="Toggle theme"
-            >
-              {isDark ? (
-                <>
-                  <Sun className="w-4 h-4 text-amber-400" />
-                  <span className="hidden sm:inline">Light</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="w-4 h-4 text-slate-600" />
-                  <span className="hidden sm:inline">Dark</span>
-                </>
-              )}
-            </button>
-
             <button
               type="button"
               onClick={onNavigateRegister}

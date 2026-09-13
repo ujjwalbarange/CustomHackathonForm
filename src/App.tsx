@@ -16,7 +16,7 @@ import {
   validateStep,
   focusAndHighlightField,
 } from "./lib/stepValidation";
-import { Sun, Moon, BookOpen, AlertCircle, X } from "lucide-react";
+import { BookOpen, AlertCircle, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 const AUTOSAVE_STORAGE_KEY = "hackx_registration_form_data";
@@ -127,29 +127,14 @@ export default function App() {
     }
   }, [formData, isSubmitted]);
 
-  // Dark mode state
-  const [isDark, setIsDark] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("hackx_theme");
-      if (saved) return saved === "dark";
-      return window.matchMedia("(prefers-color-scheme: dark)").matches;
-    }
-    return true;
-  });
-
+  // Ensure app opens and runs exclusively in default light mode
   useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("hackx_theme", "dark");
-    } else {
+    if (typeof window !== "undefined") {
       document.documentElement.classList.remove("dark");
-      localStorage.setItem("hackx_theme", "light");
+      localStorage.removeItem("hackx_theme");
+      sessionStorage.removeItem("hackx_theme");
     }
-  }, [isDark]);
-
-  const toggleDarkMode = () => {
-    setIsDark((prev) => !prev);
-  };
+  }, []);
 
   const handleUpdateForm = (updates: Partial<RegistrationFormData>) => {
     setFormData((prev) => {
@@ -228,8 +213,6 @@ export default function App() {
       <div className="min-h-[100dvh] flex flex-col font-sans">
         <HomePage
           onNavigateRegister={navigateToRegister}
-          isDark={isDark}
-          onToggleTheme={toggleDarkMode}
         />
         <Footer
           onNavigateHome={navigateToHome}
@@ -277,7 +260,7 @@ export default function App() {
             />
           </div>
 
-          {/* Right Actions: Distinct Overview & Rules Button beside Theme Toggle */}
+          {/* Right Actions: Distinct Overview & Rules Button */}
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               type="button"
@@ -288,27 +271,6 @@ export default function App() {
             >
               <BookOpen className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
               <span>Overview &amp; Rules</span>
-            </button>
-
-            <button
-              type="button"
-              id="theme-toggle-btn"
-              onClick={toggleDarkMode}
-              className="p-2 sm:px-3 sm:py-1.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all flex items-center gap-2 text-xs font-semibold shadow-2xs active:scale-[0.98]"
-              title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              aria-label="Toggle theme"
-            >
-              {isDark ? (
-                <>
-                  <Sun className="w-4 h-4 text-amber-400" />
-                  <span className="hidden sm:inline">Light</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="w-4 h-4 text-slate-600" />
-                  <span className="hidden sm:inline">Dark</span>
-                </>
-              )}
             </button>
           </div>
         </div>
