@@ -1,6 +1,17 @@
 export type TeamSize = "2 Members" | "3 Members" | "4 Members" | "5 Members";
 
 export type Track = "AI/ML" | "Web3" | "Smart Cities" | "HealthTech" | "Open Innovation";
+export type Theme = Track;
+
+export interface ThemeMeta {
+  name: Theme;
+  colorClass: string;
+  badgeBg: string;
+  badgeBorder: string;
+  badgeText: string;
+  glowColor: string;
+  accentGradient: string;
+}
 
 export type MemberRole =
   | "Frontend"
@@ -136,6 +147,56 @@ export const TRACK_OPTIONS: Track[] = [
   "Open Innovation",
 ];
 
+export const THEME_OPTIONS: Theme[] = TRACK_OPTIONS;
+
+export const THEME_METADATA_MAP: Record<Theme, ThemeMeta> = {
+  "AI/ML": {
+    name: "AI/ML",
+    colorClass: "violet",
+    badgeBg: "bg-violet-500/15 dark:bg-violet-500/20",
+    badgeBorder: "border-violet-500/30 dark:border-violet-500/40",
+    badgeText: "text-violet-700 dark:text-violet-300",
+    glowColor: "rgba(139, 92, 246, 0.35)",
+    accentGradient: "from-violet-600 to-indigo-600",
+  },
+  "Web3": {
+    name: "Web3",
+    colorClass: "emerald",
+    badgeBg: "bg-emerald-500/15 dark:bg-emerald-500/20",
+    badgeBorder: "border-emerald-500/30 dark:border-emerald-500/40",
+    badgeText: "text-emerald-700 dark:text-emerald-300",
+    glowColor: "rgba(16, 185, 129, 0.35)",
+    accentGradient: "from-emerald-600 to-teal-600",
+  },
+  "Smart Cities": {
+    name: "Smart Cities",
+    colorClass: "sky",
+    badgeBg: "bg-sky-500/15 dark:bg-sky-500/20",
+    badgeBorder: "border-sky-500/30 dark:border-sky-500/40",
+    badgeText: "text-sky-700 dark:text-sky-300",
+    glowColor: "rgba(14, 165, 233, 0.35)",
+    accentGradient: "from-cyan-500 to-blue-600",
+  },
+  "HealthTech": {
+    name: "HealthTech",
+    colorClass: "rose",
+    badgeBg: "bg-rose-500/15 dark:bg-rose-500/20",
+    badgeBorder: "border-rose-500/30 dark:border-rose-500/40",
+    badgeText: "text-rose-700 dark:text-rose-300",
+    glowColor: "rgba(244, 63, 94, 0.35)",
+    accentGradient: "from-rose-500 to-pink-600",
+  },
+  "Open Innovation": {
+    name: "Open Innovation",
+    colorClass: "amber",
+    badgeBg: "bg-amber-500/15 dark:bg-amber-500/20",
+    badgeBorder: "border-amber-500/30 dark:border-amber-500/40",
+    badgeText: "text-amber-700 dark:text-amber-300",
+    glowColor: "rgba(245, 158, 11, 0.35)",
+    accentGradient: "from-amber-500 to-orange-600",
+  },
+};
+
 export const TEAM_SIZE_OPTIONS: TeamSize[] = [
   "2 Members",
   "3 Members",
@@ -154,6 +215,11 @@ export const ROLE_OPTIONS: MemberRole[] = [
 
 export const OFFICIAL_WHATSAPP_GROUP_LINK =
   "https://chat.whatsapp.com/Cmh1MBBS112AY0sOplyBrh?s=cl&p=a&mlu=4&ilr=4";
+
+export function getMemberCountFromSize(teamSize: TeamSize | string): number {
+  const match = teamSize.match(/\d+/);
+  return match ? parseInt(match[0], 10) : 4;
+}
 
 export interface ChatMessage {
   id: string;

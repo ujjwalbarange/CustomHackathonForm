@@ -1,6 +1,7 @@
-import React, { useState } from "react";
-import { RegistrationFormData, TRACK_OPTIONS, TEAM_SIZE_OPTIONS, TeamSize } from "../types";
-import { Users, AlertTriangle, ArrowRight, Sparkles } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { RegistrationFormData, TRACK_OPTIONS, THEME_OPTIONS, TEAM_SIZE_OPTIONS, TeamSize, THEME_METADATA_MAP } from "../types";
+import { Sparkles, ArrowRight, Info, CheckCircle2 } from "lucide-react";
+import { focusAndHighlightField } from "../lib/stepValidation";
 
 interface TeamBasicsFormProps {
   data: RegistrationFormData;
@@ -13,10 +14,49 @@ export const TeamBasicsForm: React.FC<TeamBasicsFormProps> = ({
   onChange,
   onNext,
 }) => {
-  const [sizeWarning, setSizeWarning] = useState<string | null>(null);
+  const [showInfoPopover, setShowInfoPopover] = useState(false);
+  const [showThemePopover, setShowThemePopover] = useState(false);
+
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const infoButtonRef = useRef<HTMLButtonElement>(null);
+
+  const themePopoverRef = useRef<HTMLDivElement>(null);
+  const themeInfoButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Dismiss info popovers on outside click/tap
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(target) &&
+        infoButtonRef.current &&
+        !infoButtonRef.current.contains(target)
+      ) {
+        setShowInfoPopover(false);
+      }
+
+      if (
+        themePopoverRef.current &&
+        !themePopoverRef.current.contains(target) &&
+        themeInfoButtonRef.current &&
+        !themeInfoButtonRef.current.contains(target)
+      ) {
+        setShowThemePopover(false);
+      }
+    };
+
+    if (showInfoPopover || showThemePopover) {
+      document.addEventListener("mousedown", handleOutsideClick);
+      document.addEventListener("touchstart", handleOutsideClick, { passive: true });
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("touchstart", handleOutsideClick);
+    };
+  }, [showInfoPopover, showThemePopover]);
 
   const handleSizeSelect = (size: TeamSize) => {
-    setSizeWarning(null);
     const count = parseInt(size.match(/\d+/)?.[0] || "2", 10);
     const neededMembers = count - 1;
 
@@ -43,10 +83,19 @@ export const TeamBasicsForm: React.FC<TeamBasicsFormProps> = ({
     });
   };
 
-  const calculatedSlots = (parseInt(data.teamSize.match(/\d+/)?.[0] || "4", 10)) - 1;
+  const handleProceed = () => {
+    if (!data.teamName.trim()) {
+      focusAndHighlightField("teamName");
+      return;
+    }
+    onNext();
+  };
 
   return (
-    <div id="team-basics-card" className="w-full bg-white dark:bg-[#0F172A] rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800/90 p-6 sm:p-8 shadow-xs transition-colors">
+    <div
+      id="team-basics-card"
+      className="w-full bg-white dark:bg-[#0F172A] rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800/90 p-6 sm:p-8 shadow-xs transition-colors"
+    >
       {/* Header section with HackX 2026 badge */}
       <div className="pb-6 border-b border-slate-100 dark:border-slate-800">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-50 dark:bg-cyan-950/60 text-cyan-800 dark:text-cyan-300 text-xs font-semibold mb-2.5 border border-cyan-200 dark:border-cyan-800/70">
@@ -54,10 +103,10 @@ export const TeamBasicsForm: React.FC<TeamBasicsFormProps> = ({
           HackX 2026
         </div>
         <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-          Step 1: Team Basics & Track
+          Step 1: Team Basics &amp; Theme
         </h2>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Configure your team identity, competition track, and team size (2 to 5 members only).
+          Configure your squad identity, hackathon theme, and total team size.
         </p>
       </div>
 
@@ -75,49 +124,111 @@ export const TeamBasicsForm: React.FC<TeamBasicsFormProps> = ({
               placeholder="e.g. CodeWarriors, ByteForge, NexusAI"
               value={data.teamName}
               onChange={(e) => onChange({ teamName: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-hidden focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
             />
           </div>
         </div>
 
-        {/* Track Selection */}
-        <div>
-          <label className="block text-sm font-semibold text-slate-800 dark:text-slate-200 mb-2">
-            Hackathon Track / Domain <span className="text-rose-500">*</span>
-          </label>
+        {/* Hackathon Theme Selection with Inline Info Popover */}
+        <div id="hackathon-theme-section">
+          <div className="flex items-center gap-2 mb-2 relative">
+            <label className="block text-sm font-semibold text-slate-800 dark:text-slate-200">
+              Hackathon Theme <span className="text-rose-500">*</span>
+            </label>
+
+            {/* Subtle Lucide Info Icon & iOS-Style Frosted Popover */}
+            <div className="relative inline-flex items-center">
+              <button
+                type="button"
+                ref={themeInfoButtonRef}
+                id="theme-info-popover-trigger"
+                onClick={() => setShowThemePopover((prev) => !prev)}
+                onMouseEnter={() => setShowThemePopover(true)}
+                className="p-1 text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-hidden"
+                aria-label="Hackathon theme info"
+              >
+                <Info className="w-4 h-4" />
+              </button>
+
+              {showThemePopover && (
+                <div
+                  ref={themePopoverRef}
+                  id="theme-info-popover"
+                  className="absolute left-6 -top-2 z-30 w-72 sm:w-80 rounded-2xl backdrop-blur-xl bg-white/95 dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800/90 shadow-2xl p-3.5 text-xs text-slate-600 dark:text-slate-300 transition-all pointer-events-auto ring-1 ring-black/5"
+                >
+                  <p className="font-semibold text-slate-900 dark:text-white mb-1 flex items-center gap-1.5">
+                    <Info className="w-3.5 h-3.5 text-cyan-500 shrink-0" />
+                    Flexible Theme Choice
+                  </p>
+                  <p className="text-[11.5px] leading-relaxed text-slate-600 dark:text-slate-300">
+                    Irrespective of selected theme, you can choose any problem statement once statements are officially revealed.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
-            {TRACK_OPTIONS.map((track) => {
-              const isSelected = data.track === track;
+            {THEME_OPTIONS.map((theme) => {
+              const isSelected = data.track === theme;
+              const meta = THEME_METADATA_MAP[theme];
               return (
                 <button
                   type="button"
-                  key={track}
-                  id={`track-select-${track.toLowerCase().replace(/\s+|\//g, "-")}`}
-                  onClick={() => onChange({ track })}
-                  className={`px-3 py-2.5 rounded-xl text-xs font-semibold border transition-all text-center flex flex-col items-center justify-center gap-1 ${
+                  key={theme}
+                  id={`theme-select-${theme.toLowerCase().replace(/\s+|\//g, "-")}`}
+                  onClick={() => onChange({ track: theme })}
+                  className={`px-3 py-2.5 rounded-xl text-xs font-semibold border transition-all text-center flex flex-col items-center justify-center gap-1 active:scale-[0.98] ${
                     isSelected
                       ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white border-cyan-400 shadow-sm ring-2 ring-cyan-500/20 font-bold"
                       : "bg-slate-50 dark:bg-slate-900/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700/80 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-cyan-500/40"
                   }`}
                 >
-                  <span>{track}</span>
+                  <span>{theme}</span>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Team Size Selector (Strictly 2 to 5 members) */}
+        {/* Minimalist Team Size Selector with Info Popover */}
         <div className="pt-2">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2 mb-3 relative">
             <label className="block text-sm font-semibold text-slate-800 dark:text-slate-200">
-              Total Team Size (Strictly 2–5 Members) <span className="text-rose-500">*</span>
+              Total Team Size <span className="text-rose-500">*</span>
             </label>
-            <span className="text-xs font-medium text-cyan-800 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-950/60 px-2.5 py-0.5 rounded-full border border-cyan-200 dark:border-cyan-800/70">
-              1 Leader + {calculatedSlots} Members
-            </span>
+
+            {/* Info Icon Button & Floating Popover Bubble */}
+            <div className="relative inline-flex items-center">
+              <button
+                type="button"
+                ref={infoButtonRef}
+                onClick={() => setShowInfoPopover((prev) => !prev)}
+                onMouseEnter={() => setShowInfoPopover(true)}
+                className="p-1 text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-hidden"
+                aria-label="Team size info"
+              >
+                <Info className="w-4 h-4" />
+              </button>
+
+              {showInfoPopover && (
+                <div
+                  ref={popoverRef}
+                  id="team-size-info-popover"
+                  className="absolute left-6 -top-2 z-30 w-64 rounded-xl backdrop-blur-md bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800 shadow-lg p-2.5 text-xs text-slate-600 dark:text-slate-300 transition-all pointer-events-auto"
+                >
+                  <p className="font-medium text-slate-900 dark:text-white mb-0.5">
+                    Includes team leader (2–5 members total)
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Your squad consists of 1 Leader plus the selected number of teammates.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
+          {/* Segmented Cards: Prominent Numeral & High-Density Minimalist Layout */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {TEAM_SIZE_OPTIONS.map((size) => {
               const isSelected = data.teamSize === size;
@@ -128,35 +239,24 @@ export const TeamBasicsForm: React.FC<TeamBasicsFormProps> = ({
                   key={size}
                   id={`team-size-option-${count}`}
                   onClick={() => handleSizeSelect(size)}
-                  className={`p-3.5 rounded-2xl border transition-all text-left flex flex-col justify-between ${
+                  className={`p-3.5 rounded-2xl border-2 transition-all text-center flex flex-col items-center justify-center active:scale-[0.98] ${
                     isSelected
-                      ? "bg-cyan-50/60 dark:bg-cyan-950/40 border-cyan-500 dark:border-cyan-500/80 ring-2 ring-cyan-500/20 shadow-xs"
-                      : "bg-slate-50 dark:bg-slate-900/70 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:border-cyan-500/50"
+                      ? "border-cyan-500 bg-cyan-50/70 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400 shadow-xs ring-1 ring-cyan-500/30"
+                      : "border-slate-200 dark:border-slate-800/90 bg-slate-50/60 dark:bg-slate-900/60 text-slate-700 dark:text-slate-300 hover:border-cyan-500/40 hover:bg-slate-100 dark:hover:bg-slate-800/60"
                   }`}
                 >
-                  <div className="flex items-center justify-between w-full">
-                    <span className={`text-sm font-bold ${isSelected ? "text-cyan-900 dark:text-cyan-200" : "text-slate-800 dark:text-slate-200"}`}>
-                      {size}
-                    </span>
-                    <Users className={`w-4 h-4 ${isSelected ? "text-cyan-500" : "text-slate-400 dark:text-slate-500"}`} />
-                  </div>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5">
-                    1 Leader + {count - 1} Members
+                  <span className={`text-2xl sm:text-3xl font-black tracking-tight ${
+                    isSelected ? "text-cyan-600 dark:text-cyan-400" : "text-slate-800 dark:text-slate-200"
+                  }`}>
+                    {count}
+                  </span>
+                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-wider">
+                    Total Members
                   </span>
                 </button>
               );
             })}
           </div>
-
-          {sizeWarning && (
-            <div id="size-warning-banner" className="mt-3 p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-xl flex items-start gap-2.5 text-xs text-rose-800 dark:text-rose-300">
-              <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold">Constraint Enforcement:</p>
-                <p>{sizeWarning}</p>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Action button */}
@@ -164,13 +264,8 @@ export const TeamBasicsForm: React.FC<TeamBasicsFormProps> = ({
           <button
             type="button"
             id="proceed-to-step-2-btn"
-            onClick={onNext}
-            disabled={!data.teamName.trim()}
-            className={`px-6 py-3 rounded-xl text-sm font-semibold inline-flex items-center gap-2 transition-all shadow-xs ${
-              data.teamName.trim()
-                ? "bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white active:scale-98 shadow-md shadow-cyan-500/20"
-                : "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed"
-            }`}
+            onClick={handleProceed}
+            className="px-6 py-3 rounded-xl text-sm font-semibold inline-flex items-center gap-2 transition-all bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white active:scale-[0.98] shadow-md shadow-cyan-500/20"
           >
             <span>Leader Details</span>
             <ArrowRight className="w-4 h-4" />
@@ -180,4 +275,3 @@ export const TeamBasicsForm: React.FC<TeamBasicsFormProps> = ({
     </div>
   );
 };
-

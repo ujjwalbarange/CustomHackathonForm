@@ -113,7 +113,7 @@ export const FormSubmittedSuccess: React.FC<FormSubmittedSuccessProps> = ({
               </p>
             </div>
             <span className="px-3 py-1 bg-cyan-50 dark:bg-cyan-950/60 text-cyan-800 dark:text-cyan-300 text-xs font-bold rounded-lg border border-cyan-200 dark:border-cyan-800/70">
-              {data.track} Track
+              {data.track} Theme
             </span>
           </div>
 
@@ -128,7 +128,7 @@ export const FormSubmittedSuccess: React.FC<FormSubmittedSuccessProps> = ({
               <p className="text-base font-bold text-slate-900 dark:text-white mt-0.5">{data.teamSize}</p>
             </div>
             <div className="p-4 bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl">
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium block">Selected Track</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium block">Selected Theme</span>
               <p className="text-base font-bold text-slate-900 dark:text-white mt-0.5">{data.track}</p>
             </div>
           </div>

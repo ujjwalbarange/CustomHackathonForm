@@ -8,6 +8,7 @@ import {
   submitRegistration,
   submitViaBrowserSession,
 } from "../lib/formUtils";
+import { focusAndHighlightField } from "../lib/stepValidation";
 import {
   ArrowLeft,
   Loader2,
@@ -58,6 +59,7 @@ export const PaymentVerificationForm: React.FC<PaymentVerificationFormProps> = (
   const [dragActive, setDragActive] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [authRequiredDiagnostic, setAuthRequiredDiagnostic] = useState<{
     show: boolean;
     fixSteps: string[];
@@ -203,12 +205,20 @@ export const PaymentVerificationForm: React.FC<PaymentVerificationFormProps> = (
   const handleSubmit = async () => {
     setSubmissionError(null);
     setAuthRequiredDiagnostic({ show: false, fixSteps: [] });
+    setHasAttemptedSubmit(true);
 
     // Validate entire form including payment
     if (!validation.isValid) {
       setSubmissionError(
         `Please resolve the ${validation.missingFields.length} missing fields before submitting.`
       );
+      if (!data.transactionId || !data.transactionId.trim()) {
+        focusAndHighlightField("transactionId");
+      } else if (!data.screenshotBase64 && !data.screenshotUrl) {
+        focusAndHighlightField("payment-upload-dropzone");
+      } else if (!data.agreementAccepted) {
+        focusAndHighlightField("agreementAccepted");
+      }
       return;
     }
 
@@ -316,8 +326,8 @@ export const PaymentVerificationForm: React.FC<PaymentVerificationFormProps> = (
             <span className="font-bold text-slate-900 dark:text-white text-base">
               {data.teamName || "Untitled Team"}
             </span>
-            <span className="text-xs px-2 py-0.5 rounded-md bg-cyan-100 dark:bg-cyan-950 text-cyan-800 dark:text-cyan-300 font-semibold border border-cyan-200 dark:border-cyan-800/60">
-              {data.track}
+            <span className="text-xs px-2.5 py-0.5 rounded-md bg-cyan-100 dark:bg-cyan-950 text-cyan-800 dark:text-cyan-300 font-semibold border border-cyan-200 dark:border-cyan-800/60">
+              Theme: {data.track}
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -565,7 +575,16 @@ export const PaymentVerificationForm: React.FC<PaymentVerificationFormProps> = (
       </div>
 
       {/* Code of Conduct & Operational Agreement */}
-      <div className="p-4 sm:p-5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl">
+      <div
+        id="agreementAccepted"
+        className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+          data.agreementAccepted
+            ? "bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800"
+            : hasAttemptedSubmit
+            ? "bg-rose-50/40 dark:bg-rose-950/20 border-rose-300 dark:border-rose-800/80"
+            : "bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800"
+        }`}
+      >
         <label className="flex items-start gap-3 cursor-pointer group select-none">
           <input
             type="checkbox"
@@ -587,29 +606,158 @@ export const PaymentVerificationForm: React.FC<PaymentVerificationFormProps> = (
         </label>
       </div>
 
-      {/* Missing Fields Alert if incomplete */}
-      {!validation.isValid && (
-        <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-2xl">
-          <div className="flex items-start gap-2.5">
-            <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
-            <div>
-              <h4 className="text-xs font-bold text-rose-900 dark:text-rose-300">
-                Please complete mandatory requirements ({validation.missingFields.length})
-              </h4>
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {validation.missingFields.map((field, idx) => (
-                  <span
-                    key={idx}
-                    className="text-[11px] px-2 py-0.5 bg-white/80 dark:bg-slate-900 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-medium rounded-md"
-                  >
-                    {field}
-                  </span>
-                ))}
+      {/* Mandatory Requirements Drawer / Alert Card */}
+      {(() => {
+        const mandatoryPaymentItems = [
+          {
+            id: "txn",
+            fieldId: "transactionId",
+            label: "Transaction ID / UTR Number",
+            isComplete: Boolean(data.transactionId && data.transactionId.trim()),
+            hint: "12-digit UPI reference",
+          },
+          {
+            id: "screenshot",
+            fieldId: "payment-upload-dropzone",
+            label: "Payment Screenshot",
+            isComplete: Boolean(data.screenshotBase64 || data.screenshotUrl),
+            hint: "Uploaded transfer receipt",
+          },
+          {
+            id: "agreement",
+            fieldId: "agreementAccepted",
+            label: "Event Rules Agreement",
+            isComplete: Boolean(data.agreementAccepted),
+            hint: "Code of conduct acknowledgement",
+          },
+        ];
+
+        const missingMandatoryCount = mandatoryPaymentItems.filter((i) => !i.isComplete).length;
+        const hasAnyStepErrors = !validation.isValid;
+
+        // Show prominent drawer if attempted submit with missing fields, or if user is on step 4
+        return (
+          <div
+            id="mandatory-requirements-drawer"
+            className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+              missingMandatoryCount === 0 && !hasAnyStepErrors
+                ? "bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/80"
+                : hasAttemptedSubmit
+                ? "bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/70 shadow-sm"
+                : "bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800"
+            }`}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                {missingMandatoryCount === 0 && !hasAnyStepErrors ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                )}
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                  {missingMandatoryCount === 0 && !hasAnyStepErrors
+                    ? "All Requirements Completed"
+                    : `Please complete mandatory requirements (${missingMandatoryCount})`}
+                </h4>
               </div>
+
+              <span
+                className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                  missingMandatoryCount === 0
+                    ? "bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300"
+                    : "bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300"
+                }`}
+              >
+                {3 - missingMandatoryCount} of 3 verified
+              </span>
             </div>
+
+            {/* Checklist items with live status icons */}
+            <div className="space-y-2">
+              {mandatoryPaymentItems.map((item) => (
+                <button
+                  type="button"
+                  key={item.id}
+                  id={`mandatory-item-${item.id}`}
+                  onClick={() => focusAndHighlightField(item.fieldId)}
+                  className={`w-full text-left p-3 rounded-xl border flex items-center justify-between gap-3 transition-all active:scale-[0.99] group ${
+                    item.isComplete
+                      ? "bg-white dark:bg-slate-900/80 border-slate-200/80 dark:border-slate-800/80 hover:border-emerald-500/40"
+                      : "bg-white dark:bg-slate-900/90 border-rose-200/90 dark:border-rose-900/60 hover:bg-rose-50/50 dark:hover:bg-rose-950/30"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {item.isComplete ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    ) : (
+                      <span className="w-4 h-4 rounded-full border-2 border-rose-500 flex items-center justify-center shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                      </span>
+                    )}
+                    <div className="min-w-0">
+                      <span
+                        className={`text-xs font-semibold block truncate ${
+                          item.isComplete
+                            ? "text-slate-800 dark:text-slate-200 line-through opacity-75"
+                            : "text-rose-700 dark:text-rose-300 font-bold"
+                        }`}
+                      >
+                        {item.label}
+                      </span>
+                      <span className="text-[11px] text-slate-400 dark:text-slate-500 block truncate">
+                        {item.hint}
+                      </span>
+                    </div>
+                  </div>
+
+                  <span
+                    className={`text-[11px] font-bold px-2 py-0.5 rounded-md shrink-0 transition-colors ${
+                      item.isComplete
+                        ? "text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60"
+                        : "text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 group-hover:bg-rose-100 dark:group-hover:bg-rose-900/80"
+                    }`}
+                  >
+                    {item.isComplete ? "Done" : "Tap to Fill"}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* If missing items from prior steps, offer quick jump navigation */}
+            {hasAnyStepErrors && validation.missingFields.length > missingMandatoryCount && (
+              <div className="mt-3 pt-3 border-t border-slate-200/70 dark:border-slate-800 text-xs">
+                <span className="font-semibold text-slate-600 dark:text-slate-400 block mb-1.5">
+                  Earlier Steps Missing Fields:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {validation.missingFields
+                    .filter((f) => !mandatoryPaymentItems.some((m) => m.label.includes(f)))
+                    .map((field, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          if (onJumpToStep) {
+                            if (field.toLowerCase().includes("team") || field.toLowerCase().includes("track") || field.toLowerCase().includes("theme")) {
+                              onJumpToStep(1);
+                            } else if (field.toLowerCase().includes("leader")) {
+                              onJumpToStep(2);
+                            } else {
+                              onJumpToStep(3);
+                            }
+                          }
+                        }}
+                        className="text-[11px] px-2.5 py-1 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-cyan-500 hover:text-cyan-600 dark:hover:text-cyan-400 font-medium transition-colors"
+                      >
+                        {field} &rarr;
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Submission Error Banner */}
       {submissionError && (

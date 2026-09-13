@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   RegistrationFormData,
   AGREEMENT_TEXT,
-  OFFICIAL_WHATSAPP_GROUP_LINK,
 } from "../types";
 import {
   validateRegistrationData,
@@ -133,7 +132,7 @@ export const ReviewSubmitForm: React.FC<ReviewSubmitFormProps> = ({
 
       {/* Review Cards Grid */}
       <div className="mt-6 space-y-5">
-        {/* Team & Track Summary */}
+        {/* Team & Theme Summary */}
         <div className="p-5 bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-2xl">
           <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
             <div className="flex items-center gap-2">
@@ -155,7 +154,7 @@ export const ReviewSubmitForm: React.FC<ReviewSubmitFormProps> = ({
               <span className="font-bold text-slate-900 dark:text-white text-sm">{data.teamName || "(Not set)"}</span>
             </div>
             <div>
-              <span className="text-slate-500 dark:text-slate-400 block">Competition Track</span>
+              <span className="text-slate-500 dark:text-slate-400 block">Hackathon Theme</span>
               <span className="font-bold text-slate-900 dark:text-white text-sm">{data.track}</span>
             </div>
             <div>
@@ -267,22 +266,14 @@ export const ReviewSubmitForm: React.FC<ReviewSubmitFormProps> = ({
           </label>
         </div>
 
-        {/* Official WhatsApp Group Notice */}
-        <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/25 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 text-xs text-emerald-800 dark:text-emerald-200">
-            <MessageCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+        {/* Official Announcements Notice */}
+        <div className="p-4 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-300">
+            <MessageCircle className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
             <span>
-              Official WhatsApp group link will be presented on the confirmation screen immediately after submission.
+              Official communication group link will be presented on the confirmation screen immediately after submission.
             </span>
           </div>
-          <a
-            href={OFFICIAL_WHATSAPP_GROUP_LINK}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:underline shrink-0 hidden sm:inline"
-          >
-            Join WhatsApp Group &rarr;
-          </a>
         </div>
 
         {/* Action Buttons */}

@@ -1,6 +1,14 @@
 import React, { useState } from "react";
 import { RegistrationFormData, MemberRole, ROLE_OPTIONS, GOOGLE_FORM_MAPPING } from "../types";
-import { UserPlus, Mail, Phone, Building2, Check, ArrowRight, ArrowLeft, ShieldCheck, Github } from "lucide-react";
+import { UserPlus, Mail, Phone, Building2, Check, ArrowRight, ArrowLeft, Github, AlertCircle } from "lucide-react";
+import {
+  validateStep,
+  isMemberComplete,
+  focusAndHighlightField,
+  normalizeEmail,
+  normalizePhone,
+  normalizeGithub,
+} from "../lib/stepValidation";
 
 interface DynamicMembersFormProps {
   data: RegistrationFormData;
@@ -16,14 +24,25 @@ export const DynamicMembersForm: React.FC<DynamicMembersFormProps> = ({
   onBack,
 }) => {
   const [activeMemberTab, setActiveMemberTab] = useState<number>(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const calculatedSlots = parseInt(data.teamSize.match(/\d+/)?.[0] || "4", 10) - 1;
+  const teamSizeNum = parseInt(data.teamSize.match(/\d+/)?.[0] || "4", 10);
+  // Dynamic Tab Calculation: Team of N yields exactly N - 1 teammate tabs
   const totalNeeded = Math.min(
-    Math.max(calculatedSlots, data.members ? data.members.length : 0),
+    Math.max(1, teamSizeNum - 1),
     GOOGLE_FORM_MAPPING.members.length
   );
 
   const updateMember = (index: number, field: string, value: any) => {
+    let normalizedValue = value;
+    if (field === "email") {
+      normalizedValue = normalizeEmail(value);
+    } else if (field === "phone") {
+      normalizedValue = normalizePhone(value);
+    } else if (field === "github") {
+      normalizedValue = normalizeGithub(value);
+    }
+
     const updated = [...data.members];
     if (!updated[index]) {
       updated[index] = {
@@ -34,7 +53,8 @@ export const DynamicMembersForm: React.FC<DynamicMembersFormProps> = ({
         roles: ["Frontend"],
       };
     }
-    (updated[index] as any)[field] = value;
+    (updated[index] as any)[field] = normalizedValue;
+    setErrorMessage(null);
     onChange({ members: updated });
   };
 
@@ -50,6 +70,24 @@ export const DynamicMembersForm: React.FC<DynamicMembersFormProps> = ({
     if (newRoles.length === 0) return;
 
     updateMember(index, "roles", newRoles);
+  };
+
+  const handleProceed = () => {
+    const validation = validateStep(3, data);
+    if (!validation.isValid) {
+      setErrorMessage(validation.message || "Please complete all required member details.");
+      if (validation.errorMemberIndex !== undefined) {
+        setActiveMemberTab(validation.errorMemberIndex);
+      }
+      setTimeout(() => {
+        if (validation.firstErrorFieldId) {
+          focusAndHighlightField(validation.firstErrorFieldId);
+        }
+      }, 50);
+      return;
+    }
+    setErrorMessage(null);
+    onNext();
   };
 
   // Get active member, autofilling college from leader if empty
@@ -70,7 +108,7 @@ export const DynamicMembersForm: React.FC<DynamicMembersFormProps> = ({
   return (
     <div id="members-form-card" className="w-full bg-white dark:bg-[#0F172A] rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800/90 p-6 sm:p-8 shadow-xs transition-colors">
       {/* Header */}
-      <div className="pb-6 border-b border-slate-100 dark:border-slate-800">
+      <div className="pb-4 border-b border-slate-100 dark:border-slate-800">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-50 dark:bg-cyan-950/60 text-cyan-800 dark:text-cyan-300 text-xs font-semibold mb-2.5 border border-cyan-200 dark:border-cyan-800/70">
@@ -81,23 +119,25 @@ export const DynamicMembersForm: React.FC<DynamicMembersFormProps> = ({
               Step 3: Member Details
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Enter contact details and assign technical domain roles for each teammate.
+              Enter details for each member. Member 1 is the Team Leader recorded in Step 2.
             </p>
           </div>
 
           <div className="text-left sm:text-right">
-            <span className="text-xs font-medium text-cyan-800 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-950/60 px-3 py-1 rounded-full border border-cyan-200 dark:border-cyan-800/70">
-              Active: Member {activeMemberTab + 2} of {data.teamSize.split(" ")[0]}
+            <span className="text-xs font-semibold text-cyan-800 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-950/60 px-3 py-1 rounded-full border border-cyan-200 dark:border-cyan-800/70">
+              Active: Member {activeMemberTab + 2} of {teamSizeNum}
             </span>
           </div>
         </div>
+      </div>
 
-        {/* Member Selector Tabs */}
-        <div className="flex flex-wrap items-center gap-2.5 mt-5">
+      {/* Sticky Floating Sub-Bar for Member Navigation (Pinned below stepper) */}
+      <div className="sticky top-28 sm:top-32 z-15 backdrop-blur-md bg-white/95 dark:bg-[#0F172A]/95 py-3 -mx-2 px-2 border-b border-slate-200/80 dark:border-slate-800/80 transition-all">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
           {Array.from({ length: totalNeeded }).map((_, idx) => {
             const memberNum = idx + 2;
             const memberData = data.members[idx];
-            const isFilled = memberData && memberData.name.trim() !== "" && memberData.email.trim() !== "";
+            const isCompleted = isMemberComplete(memberData);
             const isSelected = activeMemberTab === idx;
 
             return (
@@ -105,41 +145,57 @@ export const DynamicMembersForm: React.FC<DynamicMembersFormProps> = ({
                 type="button"
                 key={idx}
                 id={`member-tab-${memberNum}`}
-                onClick={() => setActiveMemberTab(idx)}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                onClick={() => {
+                  setActiveMemberTab(idx);
+                  setErrorMessage(null);
+                }}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all shrink-0 active:scale-[0.98] ${
                   isSelected
                     ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white border-cyan-400 shadow-sm ring-2 ring-cyan-500/20"
-                    : isFilled
-                    ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-950/50"
-                    : "bg-slate-50 dark:bg-slate-900/70 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    : isCompleted
+                    ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-950/50"
+                    : "bg-slate-50 dark:bg-slate-900/70 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
                 }`}
               >
+                {/* Real-time status badge */}
                 <div
                   className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
                     isSelected
                       ? "bg-white/25 text-white"
-                      : isFilled
+                      : isCompleted
                       ? "bg-emerald-600 text-white"
                       : "bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
                   }`}
                 >
-                  {isFilled && !isSelected ? <Check className="w-3 h-3" /> : memberNum}
+                  {isCompleted ? <Check className="w-3 h-3 stroke-[2.5]" /> : memberNum}
                 </div>
+
                 <span>
                   Member {memberNum}
                   {memberData?.name ? `: ${memberData.name.split(" ")[0]}` : ""}
                 </span>
+
+                {/* Incomplete dot indicator if unselected and not yet filled */}
+                {!isCompleted && !isSelected && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" title="Required fields incomplete" />
+                )}
               </button>
             );
           })}
         </div>
       </div>
 
+      {errorMessage && (
+        <div className="mt-4 p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-xl flex items-center gap-2.5 text-xs text-rose-800 dark:text-rose-300">
+          <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
       {/* Active Member Form Card */}
-      <div className="mt-6">
+      <div className="mt-5">
         <div className="p-5 sm:p-6 bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-2xl">
           <div className="flex items-center gap-3 pb-4 mb-5 border-b border-slate-200 dark:border-slate-800">
-            {/* Minimalist tech avatar badge */}
             <div className="w-11 h-11 rounded-2xl flex items-center justify-center border border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 via-blue-500/10 to-indigo-500/10 text-cyan-500 font-bold text-sm shadow-xs">
               M{activeMemberTab + 2}
             </div>
@@ -149,7 +205,7 @@ export const DynamicMembersForm: React.FC<DynamicMembersFormProps> = ({
                 Member {activeMemberTab + 2} Details
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Teammate profile &bull; College automatically inherited from Leader
+                Teammate profile &bull; College defaults to Leader's institution
               </p>
             </div>
           </div>
@@ -167,7 +223,7 @@ export const DynamicMembersForm: React.FC<DynamicMembersFormProps> = ({
                   placeholder="e.g. Jane Doe"
                   value={activeMember.name}
                   onChange={(e) => updateMember(activeMemberTab, "name", e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-hidden focus:ring-2 focus:ring-cyan-500 transition-all"
                 />
               </div>
 
@@ -185,7 +241,7 @@ export const DynamicMembersForm: React.FC<DynamicMembersFormProps> = ({
                     placeholder="teammate@example.com"
                     value={activeMember.email}
                     onChange={(e) => updateMember(activeMemberTab, "email", e.target.value)}
-                    className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-hidden focus:ring-2 focus:ring-cyan-500 transition-all"
                   />
                 </div>
               </div>
@@ -195,7 +251,8 @@ export const DynamicMembersForm: React.FC<DynamicMembersFormProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor={`member-${activeMemberTab}-phone`} className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1">
-                  Phone Number
+                  Phone Number <span className="text-rose-500">*</span>
+                  <span className="ml-1 text-[11px] font-normal text-slate-400">(10 digits)</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
@@ -204,10 +261,11 @@ export const DynamicMembersForm: React.FC<DynamicMembersFormProps> = ({
                   <input
                     type="tel"
                     id={`member-${activeMemberTab}-phone`}
+                    maxLength={10}
                     placeholder="e.g. 9876543211"
                     value={activeMember.phone}
                     onChange={(e) => updateMember(activeMemberTab, "phone", e.target.value)}
-                    className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-hidden focus:ring-2 focus:ring-cyan-500 transition-all"
                   />
                 </div>
               </div>
@@ -215,13 +273,13 @@ export const DynamicMembersForm: React.FC<DynamicMembersFormProps> = ({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label htmlFor={`member-${activeMemberTab}-college`} className="block text-xs font-semibold text-slate-800 dark:text-slate-200">
-                    College / Institute
+                    College / Institute <span className="text-rose-500">*</span>
                   </label>
                   {data.leader.college && (
                     <button
                       type="button"
                       onClick={() => updateMember(activeMemberTab, "college", data.leader.college)}
-                      className="text-[11px] text-cyan-600 dark:text-cyan-400 hover:underline font-medium"
+                      className="text-[11px] text-cyan-600 dark:text-cyan-400 hover:underline font-medium active:scale-[0.98]"
                     >
                       Reset to Leader's College
                     </button>
@@ -237,7 +295,7 @@ export const DynamicMembersForm: React.FC<DynamicMembersFormProps> = ({
                     placeholder={data.leader.college || "e.g. VNIT / PCE / IIIT"}
                     value={activeMember.college}
                     onChange={(e) => updateMember(activeMemberTab, "college", e.target.value)}
-                    className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-hidden focus:ring-2 focus:ring-cyan-500 transition-all"
                   />
                 </div>
               </div>
@@ -247,58 +305,45 @@ export const DynamicMembersForm: React.FC<DynamicMembersFormProps> = ({
             {activeMapping?.github && (
               <div>
                 <label htmlFor={`member-${activeMemberTab}-github`} className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1">
-                  GitHub / Portfolio Profile Link
+                  GitHub Username (Optional)
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
                     <Github className="w-3.5 h-3.5" />
                   </div>
                   <input
-                    type="url"
+                    type="text"
                     id={`member-${activeMemberTab}-github`}
-                    placeholder="https://github.com/username"
+                    placeholder="username (without @ or URL)"
                     value={activeMember.github || ""}
                     onChange={(e) => updateMember(activeMemberTab, "github", e.target.value)}
-                    className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-hidden focus:ring-2 focus:ring-cyan-500 transition-all"
                   />
                 </div>
               </div>
             )}
 
-            {/* Member Roles (Multi-select Enum checkboxes) */}
+            {/* Technical Roles */}
             <div className="pt-2">
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200">
-                  Technical Roles (Multi-Select) <span className="text-rose-500">*</span>
-                </label>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                  {activeMember.roles.length} role(s) chosen
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-2">
+                Technical Roles &amp; Focus Domains <span className="text-rose-500">*</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
                 {ROLE_OPTIONS.map((role) => {
-                  const isChecked = activeMember.roles.includes(role);
+                  const isRoleSelected = activeMember.roles.includes(role);
                   return (
                     <button
                       type="button"
                       key={role}
-                      id={`member-${activeMemberTab}-role-${role.toLowerCase().replace(/\s+|\//g, "-")}`}
+                      id={`member-role-${role.toLowerCase().replace(/\s+|\//g, "-")}`}
                       onClick={() => toggleRole(activeMemberTab, role)}
-                      className={`px-3 py-2 rounded-xl text-xs font-medium border flex items-center justify-between transition-all ${
-                        isChecked
-                          ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white border-cyan-400 shadow-xs font-semibold"
-                          : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all active:scale-[0.98] ${
+                        isRoleSelected
+                          ? "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/40 ring-1 ring-cyan-500/20 font-semibold"
+                          : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-300"
                       }`}
                     >
-                      <span>{role}</span>
-                      <div
-                        className={`w-4 h-4 rounded flex items-center justify-center text-[10px] border ${
-                          isChecked ? "bg-white/20 border-transparent text-white" : "border-slate-300 dark:border-slate-600"
-                        }`}
-                      >
-                        {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
-                      </div>
+                      {role}
                     </button>
                   );
                 })}
@@ -306,51 +351,30 @@ export const DynamicMembersForm: React.FC<DynamicMembersFormProps> = ({
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Member Preview Strip */}
-        <div className="mt-5 p-3.5 bg-slate-100 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-2xl flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
-              Members summary: {data.members.filter((m) => m.name.trim() !== "").length} of {totalNeeded} completed.
-            </span>
-          </div>
+      {/* Navigation Buttons */}
+      <div className="flex items-center justify-between pt-6 border-t border-slate-100 dark:border-slate-800 mt-6">
+        <button
+          type="button"
+          id="back-to-step-2-btn"
+          onClick={onBack}
+          className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-[0.98] transition-colors inline-flex items-center gap-1.5"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Leader Details
+        </button>
 
-          {activeMemberTab < totalNeeded - 1 && (
-            <button
-              type="button"
-              onClick={() => setActiveMemberTab(activeMemberTab + 1)}
-              className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 hover:underline"
-            >
-              Next: Member {activeMemberTab + 3} &rarr;
-            </button>
-          )}
-        </div>
-
-        {/* Navigation Action Buttons */}
-        <div className="flex items-center justify-between pt-5 mt-6 border-t border-slate-100 dark:border-slate-800">
-          <button
-            type="button"
-            id="back-to-step-2-btn"
-            onClick={onBack}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors inline-flex items-center gap-1.5"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Leader Details
-          </button>
-
-          <button
-            type="button"
-            id="proceed-to-step-4-btn"
-            onClick={onNext}
-            className="px-6 py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white active:scale-98 inline-flex items-center gap-2 transition-all shadow-md shadow-cyan-500/20"
-          >
-            <span>Final Confirmation</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
+        <button
+          type="button"
+          id="proceed-to-step-4-btn"
+          onClick={handleProceed}
+          className="px-6 py-3 rounded-xl text-sm font-semibold inline-flex items-center gap-2 transition-all bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 active:scale-[0.98] text-white shadow-md shadow-cyan-500/20"
+        >
+          <span>Payment &amp; Verify</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );
 };
-

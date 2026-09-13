@@ -256,8 +256,8 @@ export function validateRegistrationData(data: RegistrationFormData): {
   }
 
   if (!data.track) {
-    errors.track = "Domain track is required.";
-    missingFields.push("Domain Track");
+    errors.track = "Hackathon theme is required.";
+    missingFields.push("Hackathon Theme");
   }
 
   // Leader validation

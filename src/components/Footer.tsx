@@ -22,7 +22,7 @@ export const Footer: React.FC<FooterProps> = ({
   onNavigateRegister,
 }) => {
   return (
-    <footer className="mt-auto bg-slate-100/90 dark:bg-[#02050C] border-t-2 border-slate-200 dark:border-cyan-500/20 text-slate-700 dark:text-slate-300 transition-colors relative">
+    <footer className="mt-auto bg-slate-200/90 dark:bg-[#030712] border-t-2 border-slate-300/90 dark:border-cyan-500/30 text-slate-700 dark:text-slate-300 transition-colors relative">
       {/* Subtle top ambient glow gradient for depth */}
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-cyan-500/40 dark:via-cyan-400/30 to-transparent" />
 
@@ -126,7 +126,7 @@ export const Footer: React.FC<FooterProps> = ({
                     Ujjwal Barange
                   </span>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border border-cyan-500/25">
-                    Lead Organizer
+                    Organizer
                   </span>
                 </div>
                 <div className="space-y-1 text-xs">
@@ -180,7 +180,7 @@ export const Footer: React.FC<FooterProps> = ({
       </div>
 
       {/* Bottom Sub-Footer Bar */}
-      <div className="border-t border-slate-200 dark:border-slate-800/90 bg-slate-200/60 dark:bg-[#010307] py-5 px-4 sm:px-6 lg:px-8">
+      <div className="border-t border-slate-300/80 dark:border-slate-800/90 bg-slate-300/70 dark:bg-[#010205] py-5 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
           <div className="flex items-center gap-2 text-center sm:text-left">
             <span>&copy; 2026 HackX. All rights reserved.</span>

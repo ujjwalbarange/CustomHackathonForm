@@ -35,7 +35,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   onToggleTheme,
 }) => {
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#070D18] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors selection:bg-cyan-500/20 selection:text-cyan-600 dark:selection:text-cyan-400">
+    <div className="min-h-[100dvh] bg-slate-50 dark:bg-[#070D18] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors selection:bg-cyan-500/20 selection:text-cyan-600 dark:selection:text-cyan-400">
       {/* Top Navbar */}
       <header className="bg-white/90 dark:bg-[#0B132B]/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 sticky top-0 z-40 transition-colors">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
@@ -329,7 +329,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 </div>
 
                 <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Teams assemble at the venue with their fully built, working solution ready for live demonstration. Each team will present to our jury panel, answering technical and architecture questions. Following the judging round, the Grand Winner, 1st Runner-Up, and track commendations will be awarded in the valedictory ceremony.
+                  Teams assemble at the venue with their fully built, working solution ready for live demonstration. Each team will present to our jury panel, answering technical and architecture questions. Following the judging round, the Grand Winner, 1st Runner-Up, and theme commendations will be awarded in the valedictory ceremony.
                 </p>
               </div>
             </div>
@@ -406,7 +406,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               Organizing Committee &amp; Helpdesk
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
-              Have queries about tracks, team eligibility, registration payment, or schedule? Reach out directly to our organizers:
+              Have queries about themes, team eligibility, registration payment, or schedule? Reach out directly to our organizers:
             </p>
           </div>
 
@@ -419,7 +419,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                     Ujjwal Barange
                   </h3>
                   <span className="text-xs text-slate-500 dark:text-slate-400">
-                    Lead Organizer &bull; TeleEra@PCE
+                    Organizer &bull; TeleEra@PCE
                   </span>
                 </div>
                 <span className="px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 text-xs font-bold border border-cyan-500/20">
